@@ -134,14 +134,14 @@ class Exchange(LoggingConfigurable):
             response = query_jupyterhub_api('GET', '/users/%s' % student_id)
         except JupyterhubEnvironmentError as e: # Should only go here if we are not running on Jupyterhub.
             print("Not running on Jupyterhub, not able to GET Jupyterhub user")
-            print("Warning: " + str(e)) # ERASE THIS LATER
+            print("Warning: " + str(e))
             self.log.info('Not running on Jupyterhub, not able to GET Jupyterhub user')
             self.log.info("Error caught: " + str(e))
             return []
         except JupyterhubApiError as e: # Should only go here if the api_token is invalid.
             print(str(e))
             print("Make sure you start your service with a valid 'api_token' in your Jupyterhub config")
-            self.log.error(str(e))
+            self.log.error("Error: not able to get Jupytehub user: {student}".format(student=student),str(e))
             self.log.error("Make sure you start your service with a valid 'api_token' in your Jupyterhub config")
             return []
         courses = set()
