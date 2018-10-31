@@ -9,7 +9,6 @@ import stat
 import logging
 import traceback
 import json
-import urllib.parse
 import contextlib
 
 from setuptools.archive_util import unpack_archive
