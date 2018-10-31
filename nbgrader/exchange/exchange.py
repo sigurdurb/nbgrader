@@ -140,9 +140,9 @@ class Exchange(LoggingConfigurable):
             return []
         except JupyterhubApiError as e: # Should only go here if the api_token is invalid.
             print(str(e))
-            print("Make sure you start your service with a valid 'api_token' in your Jupyterhub config")
-            self.log.error("Error: not able to get Jupyterhub user" + student_id + ":" + str(e))
-            self.log.error("Make sure you start your service with a valid 'api_token' in your Jupyterhub config")
+            print("Make sure you start your service with a valid admin_user 'api_token' in your Jupyterhub config")
+            self.log.error("Error: Not able to get Jupyterhub user: " + student_id + ": " + str(e))
+            self.log.error("Make sure you start your service with a valid admin_user 'api_token' in your Jupyterhub config")
             return []
         courses = set()
         try:
