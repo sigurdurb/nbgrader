@@ -9,7 +9,6 @@ import stat
 import logging
 import traceback
 import json
-import urllib.parse
 import contextlib
 import re # new
 
@@ -76,7 +75,7 @@ def query_jupyterhub_api(method, api_path, post_data=None):
         json = post_data,
     )
     if not req.ok:
-        raise JupyterhubApiError("Jupyterhub returned a status code of: " + str(req.status_code))
+        raise JupyterhubApiError("JupyterhubAPI returned a status code of: " + str(req.status_code) + " for api_path: " + api_path)
 
     return req.json()
 

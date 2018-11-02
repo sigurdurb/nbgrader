@@ -1141,6 +1141,47 @@ class Gradebook(object):
             .order_by(Student.last_name, Student.first_name)\
             .all()
 
+    def add_student_to_group(self, student):
+        """Add a new student to a Jupyterhub group.
+
+        Parameters
+        ----------
+        student_id : string
+            The unique id of the student
+
+
+        """
+        try:
+            group_name = "nbgrader-{}".format(self.course_id)
+            jup_groups = utils.query_jupyterhub_api(method="GET",
+                                 api_path="/groups",
+            )
+            if group_name not in [x['name'] for x in jup_groups]:
+                # This could result in a bad request(JupyterhubApiError) if there is already a group so first we check above if there is a group
+                utils.query_jupyterhub_api(method="POST",
+                                     api_path="/groups/{name}".format(name=group_name),
+                )
+                print("Jupyterhub group: {group_name} created.".format(group_name=group_name) )
+            utils.query_jupyterhub_api(method="POST",
+                                 api_path="/groups/{name}/users".format(name=group_name),
+                                 post_data = {"users":[student.id]}
+            )
+            # Saying student could be already here is because the post request returns 200 even if the student_id was already in the group
+            print("Student {student} added or was already in the Jupyterhub group: {group_name}".format(
+                student=student.id,
+                group_name=group_name
+            ))
+        except utils.JupyterhubEnvironmentError as e:
+            print("Not running on Jupyterhub, not adding {student} user to the Jupyterhub group {group_name}".format(student=student.id, group_name=group_name))
+        except utils.JupyterhubApiError as e:
+            if self.course_id: # We assume user might be using Jupyterhub but something is not working
+                err_msg = "Student {student} NOT added to the Jupyterhub group {group_name}: ".format(
+                    student=student.id,
+                    group_name=group_name
+                )
+            print(err_msg + str(e))
+            print("Make sure you set a valid admin_user 'api_token' in your config file before starting the service")
+
     def add_student(self, student_id, **kwargs):
         """Add a new student to the database.
 
@@ -1161,36 +1202,12 @@ class Gradebook(object):
         self.db.add(student)
         try:
             self.db.commit()
-            try:
-                group_name = "nbgrader-{}".format(self.course_id)
-                utils.query_jupyterhub_api(method="POST",
-                                     api_path="/groups/{name}".format(name=group_name),
-                )
-                utils.query_jupyterhub_api(method="POST",
-                                     api_path="/groups/{name}/users".format(name=group_name),
-                                     post_data = {"users":[student_id]}
-                )
-                # log.info
-                print("Student {student} added to Jupyterhub group {group_name}".format(
-                    student=student_id,
-                    group_name=group_name
-                ))
-            except (utils.JupyterhubEnvironmentError, utils.JupyterhubApiError) as e:
-                #self.log.error("Error caught: " + e) # self.log not working. Gradebook has no attribute log
-                if self.course_id: # we assume user might be using Jupyterhub but something is not working
-                    # log.error 
-                    # Note: check if log ever appears.
-                    err_msg = "Student {student} NOT added to Jupyterhub group {group_name}: ".format(
-                        student=student_id,
-                        group_name=group_name
-                    )
-                    print(err_msg + str(e))
-                    #self.log.error(err_msg)
-                print("Make sure you set a valid api_token in your config file before starting the service")
-                #self.log.error("Make sure you set a valid api_token in your config file before starting the service")
+            self.add_student_to_group(student)
+                
         except (IntegrityError, FlushError) as e:
             self.db.rollback()
             raise InvalidEntry(*e.args)
+
         return student
 
     def find_student(self, student_id):
@@ -1241,6 +1258,7 @@ class Gradebook(object):
                 setattr(student, attr, kwargs[attr])
             try:
                 self.db.commit()
+                self.add_student_to_group(student)
             except (IntegrityError, FlushError) as e:
                 self.db.rollback()
                 raise InvalidEntry(*e.args)
@@ -1273,13 +1291,13 @@ class Gradebook(object):
                                      api_path="/groups/{name}/users".format(name=group_name),
                                      post_data = {"users":[student.id]}
                 )
-                # log.info
-                print("Student {student} removed or was not in the Jupyterhub group {group_name}".format(student=name, group_name=group_name))
-            except (utils.JupyterhubEnvironmentError, utils.JupyterhubApiError) as e:
-                if self.course_id: # We assume user might be using Jupyterhub but something is not working
-                    # log.error
-                    print("Student {student} NOT removed from the Jupyterhub group {group_name}: ".format(student=name, group_name=group_name) + str(e))
-                #self.log.error("Error caught in remove_student(): " + e)
+                print("Student {student} was removed or was already not in the Jupyterhub group {group_name}".format(student=name, group_name=group_name))
+            except utils.JupyterhubEnvironmentError as e:
+                print("Not running on Jupyterhub so {student} was NOT removed from the Jupyterhub group {group_name}:".format(student=name, group_name=group_name), str(e))
+            except utils.JupyterhubApiError as e:
+                if self.course_id:
+                    print("Student {student} was NOT removed from the Jupyterhub group {group_name}:".format(student=name, group_name=group_name), str(e))
+                    print("Make sure you start your service with a valid admin_user 'api_token' in your Jupyterhub config")
         except (IntegrityError, FlushError) as e:
             self.db.rollback()
             raise InvalidEntry(*e.args)

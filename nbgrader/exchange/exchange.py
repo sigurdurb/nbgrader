@@ -141,17 +141,26 @@ class Exchange(LoggingConfigurable):
         response = None
         try:
             response = query_jupyterhub_api('GET', '/users/%s' % student_id)
-        except (JupyterhubEnvironmentError, JupyterhubApiError) as e:
-            self.log.error("Error caught: " + str(e))
-            self.log.error("Make sure you start your service with a valid 'api_token' in your config file")
+        except JupyterhubEnvironmentError as e: # Should only go here if we are not running on Jupyterhub.
+            print("Not running on Jupyterhub, not able to GET Jupyterhub user")
+            print("Warning: " + str(e))
+            self.log.info('Not running on Jupyterhub, not able to GET Jupyterhub user')
+            self.log.info("Error caught: " + str(e))
+            return []
+        except JupyterhubApiError as e: # Should only go here if the api_token is invalid.
+            print(str(e))
+            print("Make sure you start your service with a valid admin_user 'api_token' in your Jupyterhub config")
+            self.log.error("Error: Not able to get Jupyterhub user: " + student_id + ": " + str(e))
+            self.log.error("Make sure you start your service with a valid admin_user 'api_token' in your Jupyterhub config")
+            return []
         courses = set()
         try:
             for group in response['groups']:
                 if group.startswith('nbgrader-') or group.startswith('formgrade-'):
                     courses.add(group.split('-', 1)[1])
         except KeyError:
-            self.log.error("KeyError: See Jupyterhub API: " + str(response)) 
-            self.log.error("Make sure you start your service with a valid 'api_token' in your config file")
+            print("KeyError: See Jupyterhub API: " + str(response))
+            self.log.error("KeyError: See Jupyterhub API: " + str(response))
         return list(courses)
 
     def _assignment_not_found(self, src_path, other_path):
