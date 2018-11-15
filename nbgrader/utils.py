@@ -143,10 +143,6 @@ def determine_grade(cell, lang = None):
     elif cell.cell_type == 'code':
         if any(is_validate_error(cell, lang, 1)):
                 return 0, max_points
-            elif output.output_type == 'stream': #new
-                if hasattr(output, 'text'): #new
-                    if re.match('error: ', output.text): # new
-                        return 0, max_points #new
         return max_points, max_points
 
     else:
